@@ -1,0 +1,27 @@
+cgu:
+  target: bronze
+  outputs:
+
+    bronze:
+      type: duckdb
+      path: 'terceirizados-bronze.duckdb'
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet
+
+    silver:
+      type: duckdb
+      path: 'terceirizados-silver.duckdb'
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet
+
+    gold:
+      type: duckdb
+      path: 'terceirizados-gold.duckdb'
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet
