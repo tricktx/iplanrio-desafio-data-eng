@@ -215,3 +215,9 @@ __marimo__/
 *.txt
 *.hcl
 *.python-version
+*.json
+main.ipynb
+
+target/
+dbt_packages/
+logs/

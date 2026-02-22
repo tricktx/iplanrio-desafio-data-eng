@@ -26,6 +26,8 @@ dependencies = [
     "prefect-dbt>=0.7.0",
     "prefect-docker==0.7.0",
     "dbt-bigquery==1.9.1",
+    "duckdb==1.4.1",
+    "dbt-duckdb==1.9.6"
 
 ]
 
