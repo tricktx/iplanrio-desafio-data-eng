@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup as bs
 import os
+import openpyxl
 
 COLUMNS = [
         'id_terc',
@@ -94,7 +95,7 @@ def ingest_and_partition():
                 df = pd.read_csv(
                     filepath,
                     sep=';',
-                    encoding='latin1',
+                    encoding='utf-8',
                     dtype=str,
                     names=COLUMNS,
                     header=None
@@ -114,15 +115,9 @@ def ingest_and_partition():
             for mes in df['Num_Mes_Carga'].unique():
                 particionamento = f"ano={ano}/mes={mes}"
                 print(f"Creating partition: {particionamento}...")
+                os.makedirs("output", exist_ok=True)
                 
-                os.makedirs(f"output/{particionamento}", exist_ok=True)
-                if os.path.exists(filepath):
-                    print(f"{particionamento} already exists, skipping.")
-                    continue
-                
-                df_particionado = df[(df['Ano_Carga'] == ano) & (df['Num_Mes_Carga'] == mes)]
-                
-                df_particionado.to_parquet(f"output/{particionamento}/data.parquet", index=False,)
+                df.to_parquet(f"output/terceirizados_{ano}{mes.zfill(2)}.parquet", index=False,)
 
 def download_data():
 
@@ -150,5 +145,5 @@ def download_data():
                 f.write(response.content)
 
 if __name__ == "__main__":
-    download_data()
+    # download_data()
     ingest_and_partition()

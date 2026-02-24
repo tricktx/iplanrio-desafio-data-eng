@@ -1,5 +1,5 @@
 {{ config(
-    materialized='table',
+    materialized='incremental',
     schema='br_cgu_terceirizados',
     alias='silver',
     pre_hook="ATTACH 'terceirizados-bronze.duckdb' AS bronze_db"
@@ -29,3 +29,8 @@ SELECT
     CAST(cd_orgao_siape AS VARCHAR) AS id_siape,
 
 FROM bronze_db.br_cgu_terceirizados.bronze
+
+{% if is_incremental() %}
+WHERE
+    MAKE_DATE(CAST(Ano_Carga AS INT),CAST(Num_Mes_Carga AS INT),1) > (SELECT MAX(MAKE_DATE(ano, mes, 1)) FROM {{ this }})
+{% endif %}
