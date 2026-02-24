@@ -3,4 +3,6 @@
         alias='bronze') }}
 
 SELECT *
-FROM read_parquet('gs://br-cgu-terceirizados/data.parquet')
+FROM read_parquet(
+    'gs://br-cgu-terceirizados/terceirizados/*.parquet'
+)
