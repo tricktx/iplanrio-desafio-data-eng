@@ -1,0 +1,148 @@
+# https://linen.prefect.io/t/32799248/ulva73b9p-give-me-a-docker-compose-yaml-which-have-docker-ty
+
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: prefect
+      POSTGRES_PASSWORD: prefect
+      POSTGRES_DB: prefect
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prefect"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - prefect_network
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - prefect_network
+
+  # Prefect API/UI
+  prefect-server:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@postgres:5432/prefect
+      # API
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      PREFECT_SERVER_API_PORT: 4200
+      PREFECT_UI_API_URL: http://localhost:4200/api
+      # Messaging (recommended)
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: redis
+      PREFECT_REDIS_MESSAGING_PORT: 6379
+      PREFECT_REDIS_MESSAGING_DB: 0
+    command: prefect server start --no-services
+    ports:
+      - "4200:4200"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:4200/api/health', timeout=2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - prefect_network
+
+  # Background services (schedules, concurrency, notifications, etc.)
+  prefect-services:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@postgres:5432/prefect
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: redis
+      PREFECT_REDIS_MESSAGING_PORT: 6379
+      PREFECT_REDIS_MESSAGING_DB: 0
+    command: prefect server services start
+    networks:
+      - prefect_network
+
+  # One-shot init to create the Docker work pool if it doesn't exist
+  prefect-init:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+    command: >
+      sh -lc "
+      uv pip install 'prefect[docker]' &&
+      (prefect work-pool create --type docker work-pool-cgu || true) &&
+      prefect work-pool ls
+      "
+    restart: "no"
+    networks:
+      - prefect_network
+
+  # Docker worker that pulls work from the docker-pool
+  prefect-docker-worker:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      prefect-init:
+        condition: service_completed_successfully
+    environment:
+      # Point the worker at your API
+      PREFECT_SERVER_API_PORT: 4200
+      PREFECT_API_URL: http://prefect-server:4200/api
+      # Optional tuning
+      PREFECT_WORKER_PREFETCH_SECONDS: "10"
+      PREFECT_WORKER_QUERY_SECONDS: "15"
+      PREFECT_LOGGING_LEVEL: INFO
+    # Mount Docker socket so the worker can launch containers
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      sh -lc "
+      uv pip install 'prefect[docker]' &&
+      prefect worker start --pool work-pool-cgu --name work-cgu
+      "
+    restart: unless-stopped
+    networks:
+      - prefect_network
+    
+  prefect-deploy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cgu-pipeline:latest
+    depends_on:
+      prefect-init:
+        condition: service_completed_successfully
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+      PREFECT_SERVER_ALLOW_EPHEMERAL_MODE: "false"
+    command: deploy.py
+    restart: "no"
+    networks:
+      - prefect_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  prefect_network:
+    driver: bridge

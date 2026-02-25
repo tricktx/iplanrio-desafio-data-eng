@@ -7,25 +7,26 @@ from src.pipelines.tasks import (
 )
 
 @flow(
-    log_prints=False
+    log_prints=False,
+    name="CGU Data Pipeline"
 )
 def flow_cgu() -> None:
     
-    # if not check_for_update(['.csv','.xlsx']):
-    #     print("Nenhum arquivo novo encontrado. Encerrando o processo.")
-    #     return
+    if not check_for_update(['.csv','.xlsx']):
+        print("Nenhum arquivo novo encontrado. Encerrando o processo.")
+        return
     
-    # download_data(
-    #     ['.csv',
-    #     '.xlsx']
-    #     )
+    download_data(
+        ['.csv',
+        '.xlsx']
+        )
     
-    # ingest_and_partition(
-    #     input = 'input',
-    #     output = 'output'
-    # )
+    ingest_and_partition(
+        input = 'input',
+        output = 'output'
+    )
     
-    # upload_files_in_directory(data_path_local = "output", destination_directory="terceirizados/")
+    upload_files_in_directory(data_path_local = "output", destination_directory="terceirizados/")
     
     invoke_dbt(
         targets = ["bronze", "silver", "gold"],

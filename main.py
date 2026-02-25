@@ -20,10 +20,10 @@ pd.set_option("display.max_colwidth", None)
 # print(result)
 # print(f"Success: {result[0]} rows")
 
-con = duckdb.connect("terceirizados-silver.duckdb")
+# con = duckdb.connect("terceirizados-silver.duckdb")
 
-result = con.execute("SELECT * FROM br_cgu_terceirizados.silver").df()
-breakpoint()
-print(result)
+# result = con.execute("SELECT * FROM br_cgu_terceirizados.silver").df()
+# breakpoint()
+# print(result)
 
-con.close()
+# con.close()

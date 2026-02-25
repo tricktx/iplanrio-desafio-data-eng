@@ -17,17 +17,16 @@ dependencies = [
     "tqdm==4.66.2",
     "google-auth==2.22.0",
     "google-auth-oauthlib>=1.0.0",
-    "google-cloud-bigquery>=3.11.4",
     "google-cloud-bigquery-storage>=2.19.1",
     "google-cloud-storage>=2.9.0",
     "prefect>=3.4.25",
     "prefect-gcp>=0.6.11",
-    "prefect-github>=0.3.2",
     "prefect-dbt>=0.7.0",
     "prefect-docker==0.7.0",
-    "dbt-bigquery==1.9.1",
     "duckdb==1.4.1",
-    "dbt-duckdb==1.9.6"
+    "dbt-duckdb==1.9.6",
+    "openpyxl==3.1.5",
+    "pyarrow>=7.0.0",
 
 ]
 

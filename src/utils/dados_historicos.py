@@ -2,7 +2,6 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup as bs
 import os
-import openpyxl
 
 COLUMNS = [
         'id_terc',
