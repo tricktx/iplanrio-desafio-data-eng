@@ -216,8 +216,9 @@ __marimo__/
 *.hcl
 *.python-version
 *.json
-main.ipynb
+main.*
 .duckdb
+duckdb/
 
 target/
 dbt_packages/

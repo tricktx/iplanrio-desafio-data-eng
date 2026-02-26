@@ -4,7 +4,7 @@ cgu:
 
     bronze:
       type: duckdb
-      path: 'terceirizados-bronze.duckdb'
+      path: 'duckdb/terceirizados-bronze.duckdb'
       threads: 4
       extensions:
         - httpfs
@@ -12,7 +12,7 @@ cgu:
 
     silver:
       type: duckdb
-      path: 'terceirizados-silver.duckdb'
+      path: 'duckdb/terceirizados-silver.duckdb'
       threads: 4
       extensions:
         - httpfs
@@ -20,7 +20,7 @@ cgu:
 
     gold:
       type: duckdb
-      path: 'terceirizados-gold.duckdb'
+      path: 'duckdb/terceirizados-gold.duckdb'
       threads: 4
       extensions:
         - httpfs

@@ -7,31 +7,31 @@ from src.pipelines.tasks import (
 )
 
 @flow(
-    log_prints=False
+    log_prints=False,
 )
-def flow_cgu() -> None:
+def flow_cgu_raw() -> None:
     
-    # if not check_for_update(['.csv','.xlsx']):
-    #     print("Nenhum arquivo novo encontrado. Encerrando o processo.")
-    #     return
+    if not check_for_update(['.csv','.xlsx']):
+        print("Nenhum arquivo novo encontrado. Encerrando o processo.")
+        return
     
-    # download_data(
-    #     ['.csv',
-    #     '.xlsx']
-    #     )
+    download_data(
+        ['.csv',
+        '.xlsx']
+        )
     
-    # ingest_and_partition(
-    #     input = 'input',
-    #     output = 'output'
-    # )
-    
-    # upload_files_in_directory(data_path_local = "output", destination_directory="terceirizados/")
-    
-    invoke_dbt(
-        targets = ["bronze", "silver", "gold"],
-        commands = ["run", "test"]
+    ingest_and_partition(
+        input = 'input',
+        output = 'output'
     )
     
-
+    upload_files_in_directory(data_path_local = ["output"], destination_directory=["terceirizados/"])
+    
+    invoke_dbt(
+        targets = ["bronze", "silver"],
+    )
+    
+    upload_files_in_directory(data_path_local = "duckdb", destination_directory=["bronze", "silver", "gold"])
+    
 if __name__ == "__main__":
-    flow_cgu()
+    flow_cgu_raw()

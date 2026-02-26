@@ -2,7 +2,7 @@
     materialized='incremental',
     schema='br_cgu_terceirizados',
     alias='silver',
-    pre_hook="ATTACH 'terceirizados-bronze.duckdb' AS bronze_db"
+    pre_hook="ATTACH 'duckdb/terceirizados-bronze.duckdb' AS bronze_db"
 ) }}
 
 SELECT

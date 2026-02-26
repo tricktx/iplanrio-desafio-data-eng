@@ -1,0 +1,78 @@
+---
+version: 2
+models:
+  - name: silver
+    description: Dados na camada Silver após a renomeação de colunas e tratamento na coluna `jornada`, `salario` e `custo`
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - id
+    columns:
+      - name: id
+        description: Identificador do registro do terceirizado nesta base de dados
+        tests:
+          - not_null
+      - name: sigla_orgao_superior
+        description: Sigla do órgão superior da unidade gestora do terceirizado
+        tests:
+          - not_null
+      - name: id_unidade_gestora
+        description: Código da unidade gestora (proveniente do Sistema Integrado de Administração Financeira do Governo Federal - SIAFI) do terceirizado
+      - name: nome_unidade_gestora
+        description: Nome da unidade gestora do terceirizado
+      - name: sigla_unidade_gestora
+        description: Sigla da unidade gestora do terceirizado
+      - name: id_contrato
+        description: Número do contrato com a empresa terceirizada
+      - name: cnpj_empresa
+        description: Cnpj da empresa terceirizada
+      - name: razao_social
+        description: Razão Social da empresa terceirizada
+      - name: cpf
+        description: Cpf do terceirizado
+      - name: nome
+        description: Nome completo do terceirizado
+      - name: id_categoria_profissional
+        description: Código da Classificação Brasileira de Ocupações (CBO) e descrição da categoria profissional do terceirizado
+      - name: escolaridade
+        description: Nível de escolaridade exigido pela ocupação do terceirizado
+      - name: jornada
+        description: Quantidade de horas semanais de trabalho do terceirizado
+      - name: descricao_unidade_prestacao
+        description: Descrição da unidade onde o terceirizado trabalha
+      - name: salario
+        description: Valor mensal do salário do terceirizado
+        tests:
+          - not_null
+      - name: custo
+        description: Custo total mensal do terceirizado
+        tests:
+          - not_null
+      - name: mes
+        description: Mês da carga de dados
+        tests:
+          - not_null
+      - name: ano
+        description: Ano da carga dos dados
+        tests:
+          - not_null
+      - name: sigla_orgao
+        description: Sigla do órgão onde o terceirizado trabalha
+      - name: nome_orgao
+        description: Nome do órgão onde o terceirizado trabalha
+      - name: id_siafi
+        description: Código SIAFI do órgão onde o terceirizado trabalha
+      - name: id_siape
+        description: Código SIAPE (Sistema de Administração de Pessoal) do órgão onde o terceirizado trabalha
+
+  - name: gold
+    description: Dados da Camara Gold, com as colunas id, sigla_orgao_superior, cnpj e cpf
+    columns:
+      - name: id
+        description: Identificador do registro do terceirizado nesta base de dados
+      - name: sigla_orgao_superior
+        description: Sigla do órgão superior da unidade gestora do terceirizado
+      - name: cnpj_empresa
+        description: Cnpj da empresa terceirizada
+      - name: cpf
+        description: Cpf do terceirizado
