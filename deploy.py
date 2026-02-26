@@ -16,5 +16,4 @@ if __name__ == "__main__":
         build=False,
         version="1.0",
         push=False
-        
     )

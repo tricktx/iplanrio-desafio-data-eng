@@ -64,3 +64,15 @@ models:
         description: Código SIAFI do órgão onde o terceirizado trabalha
       - name: id_siape
         description: Código SIAPE (Sistema de Administração de Pessoal) do órgão onde o terceirizado trabalha
+
+  - name: gold
+    description: Dados da Camara Gold, com as colunas id, sigla_orgao_superior, cnpj e cpf
+    columns:
+      - name: id
+        description: Identificador do registro do terceirizado nesta base de dados
+      - name: sigla_orgao_superior
+        description: Sigla do órgão superior da unidade gestora do terceirizado
+      - name: cnpj_empresa
+        description: Cnpj da empresa terceirizada
+      - name: cpf
+        description: Cpf do terceirizado

@@ -136,6 +136,8 @@ services:
       PREFECT_SERVER_ALLOW_EPHEMERAL_MODE: "false"
     command: deploy.py
     restart: "no"
+    volumes:
+      - ./duckdb:/app/duckdb
     networks:
       - prefect_network
 

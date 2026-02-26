@@ -6,6 +6,8 @@
 ) }}
 
 SELECT 
-    *
+    id, 
+    sigla_orgao_superior,
+    cnpj,
+    cpf
 FROM silver_db.silver
-WHERE nome_unidade_gestora = 'DEPARTAMENTO DE POLICIA RODOVIARIA FEDERAL'
