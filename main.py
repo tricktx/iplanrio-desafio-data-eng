@@ -1,11 +1,11 @@
-import duckdb
-import pandas as pd
+# import duckdb
+# import subprocess
+# from dateutil.relativedelta import relativedelta
 
-pd.set_option("display.max_columns", None)
-pd.set_option("display.max_colwidth", None)
-# # Get access token
+# # https://medium.com/@404c3s4r/subprocess-no-python-937a3c3bd518
 # result = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
 #                         capture_output=True, text=True)
+
 # access_token = result.stdout.strip()
 
 # con = duckdb.connect()
@@ -14,16 +14,32 @@ pd.set_option("display.max_colwidth", None)
 # con.execute("DROP SECRET IF EXISTS gcs_secret")
 # con.execute(f"CREATE SECRET gcs_secret (TYPE GCS, bearer_token '{access_token}')")
 
-# # This works perfectly
-# result = con.execute("SELECT * FROM read_parquet('gs://br-cgu-terceirizados/data.parquet') limit 10").fetchone()
+# result = con.execute("""
+#                       SELECT MAX(
+#                           make_date(
+#                               CAST(Ano_Carga AS INT),
+#                               CAST(Num_Mes_Carga AS INT),
+#                               1
+#                           )
+#                       ) as date
+#                       FROM read_parquet('gs://br-cgu-terceirizados/terceirizados/*.parquet') limit 10
+#                       """).fetchone()[0]
+
+# print(f"Max date in DuckDB: {str(result)}")
+# print(f"Max date after adding 4 months: {str(result + relativedelta(months=4))}")
+
+# result_after_four_month = str(result + relativedelta(months=4))[0:7].replace('-', '')
+
 # breakpoint()
-# print(result)
-# print(f"Success: {result[0]} rows")
 
-# con = duckdb.connect("terceirizados-silver.duckdb")
+import duckdb
 
-# result = con.execute("SELECT * FROM br_cgu_terceirizados.silver").df()
-# breakpoint()
-# print(result)
+con = duckdb.connect('duckdb/terceirizados-silver.duckdb')
 
-# con.close()
+
+df = con.execute("""
+  SELECT * FROM br_cgu_terceirizados.silver
+  
+""").df()
+
+breakpoint()
