@@ -2,7 +2,7 @@
 version: 2
 models:
   - name: silver
-    description: Dados na camada Silver após a renomeação de colunas e tratamento na coluna `jornada`, `salario` e `custo`
+    description: Tabela Silver contendo dados consolidados de servidores terceirizados disponibilizados pela CGU.
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
@@ -66,7 +66,7 @@ models:
         description: Código SIAPE (Sistema de Administração de Pessoal) do órgão onde o terceirizado trabalha
 
   - name: gold
-    description: Dados da Camara Gold, com as colunas id, sigla_orgao_superior, cnpj e cpf
+    description: Tabela gold contendo dados consolidados de servidores terceirizados disponibilizados pela CGU. Essa camada é otimizada para consumo via API.
     columns:
       - name: id
         description: Identificador do registro do terceirizado nesta base de dados

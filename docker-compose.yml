@@ -128,12 +128,14 @@ services:
       context: .
       dockerfile: Dockerfile
     image: cgu-pipeline:latest
+    
     depends_on:
       prefect-init:
         condition: service_completed_successfully
     environment:
       PREFECT_API_URL: http://prefect-server:4200/api
       PREFECT_SERVER_ALLOW_EPHEMERAL_MODE: "false"
+      GOOGLE_APPLICATION_CREDENTIALS: /app/service-account.json
     command: deploy.py
     restart: "no"
     volumes:
