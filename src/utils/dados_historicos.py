@@ -2,6 +2,8 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup as bs
 import os
+from prefect import task, flow
+from src.utils.setup import upload_files_in_directory, log
 
 COLUMNS = [
         'id_terc',
@@ -56,9 +58,38 @@ COOKIES = {
     'ttcsid_CJVHHJ3C77U20ERJTS3G': '1771549106857::PNN-CSJfXlvKxeK2swm4.15.1771549162814.1',
 }
 
+
+    
+@task
 def ingest_and_partition():
+    """
+    Ingest and partition historical data from CSV or XLSX files.
+    This task function processes input files (CSV or XLSX format) and performs the following operations:
+    1. Reads the header of each file to extract column names
+    2. Validates columns against a predefined COLUMNS constant
+    3. If columns don't match, forces the schema using COLUMNS as column names
+    4. Loads the full dataset with string dtype
+    5. Partitions the data by year (Ano_Carga) and month (Num_Mes_Carga)
+    6. Exports each partition to a parquet file in the output directory
+    Supported file formats:
+        - CSV: Expects semicolon separator and latin1 encoding
+        - XLSX: Expects default Excel format
+    File handling:
+        - CSV: Uses latin1 encoding when columns match, utf-8 when forcing schema
+        - XLSX: Consistent handling for both matching and mismatched schemas
+    Output:
+        Parquet files saved to 'output/' directory with naming convention:
+        'terceirizados_{ano}{mes_zero_padded}.parquet'
+    Raises:
+        FileNotFoundError: If input directory doesn't exist
+        ValueError: If required columns (Ano_Carga, Num_Mes_Carga) are missing after schema enforcement
+    Notes:
+        - All data is read as strings (dtype=str)
+        - Uses Prefect @task decorator for workflow orchestration
+        - Logging is performed at key processing steps
+    """
     for file in os.listdir('input'):
-        print(f"Processing file: {file}...")
+        log(f"Processing file: {file}...")
 
         filepath = os.path.join('input', file)
 
@@ -79,7 +110,7 @@ def ingest_and_partition():
 
 
         if cols == COLUMNS:
-            print("Columns match, proceeding to read full dataset.")
+            log("Columns match, proceeding to read full dataset.")
 
             if file.endswith('.csv'):
                 df = pd.read_csv(filepath, sep=';', encoding='latin1', dtype=str)
@@ -88,7 +119,7 @@ def ingest_and_partition():
                 df = pd.read_excel(filepath, dtype=str)
 
         else:
-            print(f"Columns do not match for {file}, forcing schema...")
+            log(f"Columns do not match for {file}, forcing schema...")
 
             if file.endswith('.csv'):
                 df = pd.read_csv(
@@ -108,19 +139,37 @@ def ingest_and_partition():
                     header=None
                 )
 
-        print(f"Loaded {file} with shape {df.shape}")
+        log(f"Loaded {file} with shape {df.shape}")
         
         for ano in df['Ano_Carga'].unique():
-            for mes in df['Num_Mes_Carga'].unique():
+            for mes in df['Num_Mes_Carga'].dropna().unique():
                 particionamento = f"ano={ano}/mes={mes}"
-                print(f"Creating partition: {particionamento}...")
+                log(f"Creating partition: {particionamento}...")
                 os.makedirs("output", exist_ok=True)
                 
-                df.to_parquet(f"output/terceirizados_{ano}{mes.zfill(2)}.parquet", index=False,)
+                df.to_parquet(f"output/terceirizados_{ano}-{mes.zfill(2)}.parquet", index=False,)
 
-def download_data():
-
-    r = requests.get('https://www.gov.br/cgu/pt-br/acesso-a-informacao/dados-abertos/arquivos/terceirizados')
+@task
+def download_data(url : str = 'https://www.gov.br/cgu/pt-br/acesso-a-informacao/dados-abertos/arquivos/terceirizados'):
+    """
+    Download data files from a government website and save them locally.
+    This task function fetches an HTML page, parses it to find all downloadable
+    files (CSV and XLSX formats), and downloads them to a local 'input' directory.
+    Files that already exist locally are skipped to avoid redundant downloads.
+    Args:
+        url (str): The URL of the government data portal to scrape.
+                Defaults to 'https://www.gov.br/cgu/pt-br/acesso-a-informacao/dados-abertos/arquivos/terceirizados'
+    Returns:
+        None
+    Raises:
+        requests.exceptions.HTTPError: If the HTTP request fails for any downloaded file.
+    Notes:
+        - Creates 'input' directory if it doesn't exist
+        - Skips files that already exist locally
+        - Uses predefined COOKIES and HEADERS for HTTP requests
+        - Only downloads files ending in .csv or .xlsx
+    """
+    r = requests.get(url)
 
     soup = bs(r.text, 'html.parser')
 
@@ -128,21 +177,27 @@ def download_data():
 
     for x in soup.find_all('a', class_="internal-link", href=True):
         if x['href'].endswith(('.csv', '.xlsx')):
-            print(f"Downloading {x['href']}...")
+            log(f"Downloading {x['href']}...")
             filename = x['href'].split('/')[-1]
             filepath = os.path.join('input', filename)
             if os.path.exists(filepath):
-                print(f"{filename} already exists, skipping.")
+                log(f"{filename} already exists, skipping.")
                 continue
             
-            print(f"Saving to {filepath}...")
+            log(f"Saving to {filepath}...")
 
             response = requests.get(x['href'], cookies=COOKIES, headers=HEADERS)
             response.raise_for_status()
 
             with open(filepath, 'wb') as f:
                 f.write(response.content)
-
-if __name__ == "__main__":
-    # download_data()
+                
+@flow(
+    log_prints=False,
+    name="Dados Históricos"
+)
+def dados_historicos():
     ingest_and_partition()
+    download_data()
+    upload_files_in_directory(data_path_local = "output", destination_directory=["terceirizados/"])
+

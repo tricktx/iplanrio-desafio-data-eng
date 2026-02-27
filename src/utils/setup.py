@@ -1,15 +1,39 @@
 
 from prefect import task
-from prefect_gcp import GcsBucket, GcpCredentials
+from prefect_gcp import GcsBucket
 from prefect.logging import get_run_logger
 import os
-import json
 from dbt.cli.main import dbtRunner
 import duckdb
 from dateutil.relativedelta import relativedelta
 from typing import List
 from dotenv import load_dotenv
-import subprocess
+import google.auth
+import google.auth.transport.requests
+from google.oauth2 import service_account
+
+def get_gcs_token():
+    """
+    Retrieve a valid GCS authentication token from a service account.
+    This function loads credentials from a service account JSON file, refreshes
+    the token to ensure validity, and returns the access token for authenticating
+    requests to Google Cloud Storage and other GCP services.
+    Returns:
+        str: A valid OAuth 2.0 access token for GCP authentication.
+    Raises:
+        FileNotFoundError: If the service-account.json file is not found.
+        ValueError: If the service account JSON file is invalid or malformed.
+        google.auth.exceptions.RefreshError: If the token refresh fails.
+    """
+    creds = service_account.Credentials.from_service_account_file(
+        "service-account.json",
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    auth_req = google.auth.transport.requests.Request()
+
+    creds.refresh(auth_req)
+    
+    return creds.token
 
 def log(*args):
     logger = get_run_logger()
@@ -74,77 +98,64 @@ def upload_files_in_directory(data_path_local: str, destination_directory: List[
 
 
 @task
-def invoke_dbt(targets: List[str],
-                ) -> None:
-    """
-    Execute dbt run and test commands on specified targets.
-    Loads GCP credentials from Prefect secrets, writes them to a temporary
-    service account file, and executes dbt run commands for each target.
-    Finally, executes dbt test on the silver target. The service account
-    file is cleaned up in the finally block.
-    Args:
-        targets (List[str]): List of dbt target names to run models for.
-    Returns:
-        None
-    Raises:
-        Exception: Any exceptions raised by dbtRunner.invoke() will propagate.
-    Side Effects:
-        - Creates temporary service-account.json file
-        - Loads environment variables from .env file
-        - Removes service-account.json file after execution
-    """
-    try:
-        gcp_credentials = GcpCredentials.load("cgu-service-account")
+def invoke_dbt() -> None:
+    
+    load_dotenv(dotenv_path=".env")
 
-        credentials_dict = gcp_credentials.service_account_info.get_secret_value()
-        
-        with open("service-account.json", "w") as f:
-            json.dump(credentials_dict, f)
-        
-        load_dotenv(dotenv_path=".env")
-        
-        runner = dbtRunner()
-        
-        for target in targets:
-            cli_args_run = [
-                "run",
-                "--target",
-                target,
-                "--select",
-                target,
-            ]
-            
-            log(f"executing dbt run : {cli_args_run}")
-            runner.invoke(cli_args_run)
-            
-        cli_args_test = [
-            'test',
+    token = get_gcs_token()
+
+
+    os.environ["GCS_TOKEN"] = token
+    
+    runner = dbtRunner()
+    log("Start Run Bronze!!!")
+    
+    runner.invoke([
+        "run",
+        "--target",
+        "bronze",
+        "--select",
+        "bronze",
+    ])
+    
+    log("Start Run Silver!!!")
+    runner.invoke([
+        "run",
+        "--target",
+        "silver",
+        "--select",
+        "silver",
+    ])
+    
+    log("Start Teste Silver!!!")
+    result = runner.invoke([
+        "test",
+        "--target",
+        "silver",
+        "--select",
+        "silver",
+    ])
+
+    if result.success:
+        log("Start Run Gold!!!")
+        runner.invoke([
+            "run",
             "--target",
-            "silver",
+            "gold",
             "--select",
-            "silver",
-        ]
-            
-        log(f"executing dbt test : {cli_args_test}")
-        runner.invoke(cli_args_test)
-        
-    finally:
-        os.remove("service-account.json")
+            "gold",
+        ])
+    else:
+        raise Exception("Silver tests failed. Aborting gold execution.")
 
 
-def max_date_duckdb(file_parquet: str = "gs://br-cgu-terceirizados/terceirizados/*.parquet") -> str:
-
-    # https://medium.com/@404c3s4r/subprocess-no-python-937a3c3bd518
-    result = subprocess.run(['gcloud', 'auth', 'application-default', 'print-access-token'], 
-                            capture_output=True, text=True)
-
-    access_token = result.stdout.strip()
-
+def max_date_duckdb(file_parquet: str) -> str:
+    
     con = duckdb.connect()
     con.execute("INSTALL httpfs")
     con.execute("LOAD httpfs")
     con.execute("DROP SECRET IF EXISTS gcs_secret")
-    con.execute(f"CREATE SECRET gcs_secret (TYPE GCS, bearer_token '{access_token}')")
+    con.execute(f"CREATE SECRET gcs_secret (TYPE GCS, bearer_token '{get_gcs_token()}')")
 
     result = con.execute(f"""
                         SELECT MAX(
@@ -154,7 +165,7 @@ def max_date_duckdb(file_parquet: str = "gs://br-cgu-terceirizados/terceirizados
                                 1
                             )
                         ) as date
-                        FROM read_parquet({file_parquet})
+                        FROM read_parquet('{file_parquet}')
                         """).fetchone()[0]
 
     log(f"Max date in DuckDB: {str(result)}")
@@ -163,3 +174,23 @@ def max_date_duckdb(file_parquet: str = "gs://br-cgu-terceirizados/terceirizados
     result_after_four_month = str(result + relativedelta(months=4))[0:7].replace('-', '')
     
     return result_after_four_month
+
+
+def build_filenames(yyyymm: str):
+    meses = {
+        1: "janeiro",
+        5: "maio",
+        9: "setembro",
+
+    }
+
+    if yyyymm == '202601':
+        year = int(yyyymm[:4])
+        month = int(yyyymm[4:6])
+
+        date = f"{year}{month:02d}"
+        text = f"{meses[month]}"
+        return [date, text]
+
+    else:
+        return yyyymm

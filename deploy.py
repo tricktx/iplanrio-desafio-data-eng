@@ -6,6 +6,9 @@ if __name__ == "__main__":
         name="deploy-cgu",
         work_pool_name="work-pool-cgu",
         image="cgu-pipeline:latest",
+        parameters={
+            "date" : None,
+            "load_to_data" : False},
         job_variables={
             "image_pull_policy": "Never",
             "networks": ["iplanrio-desafio-data-eng_prefect_network"],},
@@ -17,3 +20,5 @@ if __name__ == "__main__":
         version="1.0",
         push=False
     )
+    
+    
