@@ -17,6 +17,32 @@ def log(*args):
 
 @task
 def upload_files_in_directory(data_path_local: str, destination_directory: List[str]) -> None:
+    """
+    Upload files from a local directory to a Google Cloud Storage bucket based on folder matching.
+
+    This function iterates through files in a local directory and uploads them to a GCS bucket.
+    Each file is uploaded to a destination folder determined by matching the file name with
+    entries in the destination_directory list.
+
+    Args:
+        data_path_local (str): The local directory path containing files to upload.
+        destination_directory (List[str]): A list of destination folder names. Each file name
+            is checked against these folder names, and if a match is found, the file is uploaded
+            to that folder in the GCS bucket.
+
+    Returns:
+        None
+
+    Raises:
+        Logs a message and skips files that:
+        - Are not files (e.g., directories)
+        - Don't match any folder in destination_directory
+
+    Note:
+        - Uses the "cgu-bucket" GCS bucket for uploads
+        - Requires the GcsBucket class to be properly initialized
+        - Non-file items and unmatched files are skipped with logging
+    """
     bucket = GcsBucket.load("cgu-bucket")
 
     for file_name in os.listdir(data_path_local):
@@ -48,9 +74,25 @@ def upload_files_in_directory(data_path_local: str, destination_directory: List[
 
 
 @task
-def invoke_dbt(
-                targets: List[str],
+def invoke_dbt(targets: List[str],
                 ) -> None:
+    """
+    Execute dbt run and test commands on specified targets.
+    Loads GCP credentials from Prefect secrets, writes them to a temporary
+    service account file, and executes dbt run commands for each target.
+    Finally, executes dbt test on the silver target. The service account
+    file is cleaned up in the finally block.
+    Args:
+        targets (List[str]): List of dbt target names to run models for.
+    Returns:
+        None
+    Raises:
+        Exception: Any exceptions raised by dbtRunner.invoke() will propagate.
+    Side Effects:
+        - Creates temporary service-account.json file
+        - Loads environment variables from .env file
+        - Removes service-account.json file after execution
+    """
     try:
         gcp_credentials = GcpCredentials.load("cgu-service-account")
 
