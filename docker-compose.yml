@@ -141,6 +141,18 @@ services:
     networks:
       - prefect_network
 
+  fast-api-deploy:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    ports:
+      - "8000:80"
+    depends_on:
+      prefect-init:
+        condition: service_completed_successfully
+    networks:
+      - prefect_network
+
 volumes:
   postgres_data:
   redis_data:
