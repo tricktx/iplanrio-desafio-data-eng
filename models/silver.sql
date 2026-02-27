@@ -12,6 +12,7 @@ SELECT
     CAST(nm_ug_tabela_ug AS VARCHAR) AS nome_unidade_gestora,
     CAST(sg_ug_gestora AS VARCHAR) AS sigla_unidade_gestora,
     CAST(nr_contrato AS VARCHAR) AS id_contrato,
+    CAST(nr_cnpj AS VARCHAR) AS cnpj_empresa,
     CAST(nm_razao_social AS VARCHAR) AS razao_social,
     CAST(nr_cpf AS VARCHAR) AS cpf,
     CAST(nm_terceirizado AS VARCHAR) AS nome,

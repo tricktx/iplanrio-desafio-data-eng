@@ -1,13 +1,13 @@
 {{ config(
-    materialized='incremental',
+    materialized='table',
     schema='br_cgu_terceirizados',
-    alias='gold_policia_federal',
+    alias='gold',
     pre_hook="ATTACH 'duckdb/terceirizados-silver.duckdb' AS silver_db"
 ) }}
 
 SELECT 
     id, 
     sigla_orgao_superior,
-    cnpj,
+    cnpj_empresa,
     cpf
-FROM silver_db.silver
+FROM silver_db.br_cgu_terceirizados.silver
