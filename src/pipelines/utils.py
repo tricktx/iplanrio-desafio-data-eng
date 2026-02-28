@@ -1,7 +1,5 @@
-import pandas as pd
 import requests
 import os
-from bs4 import BeautifulSoup as bs
 from src.pipelines.constants import constants
 from dateutil.relativedelta import relativedelta
 import duckdb
