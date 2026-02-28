@@ -152,6 +152,8 @@ services:
     depends_on:
       prefect-init:
         condition: service_completed_successfully
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json
     networks:
       - prefect_network
 

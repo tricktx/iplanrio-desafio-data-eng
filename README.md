@@ -40,51 +40,160 @@ br-cgu-terceirizados/
 
 ## Configurando o projeto
 
-1. Clone o projeto
+## Configurando o Projeto
 
+### 1. Clone o repositório
 ```bash
-https://github.com/tricktx/iplanrio-desafio-data-eng.git
+git clone https://github.com/tricktx/iplanrio-desafio-data-eng.git
 ```
 
-2. Navegue até o repositório:
-
+### 2. Navegue até o diretório do projeto
 ```bash
-iplanrio-desafio-data-eng
+cd iplanrio-desafio-data-eng
 ```
 
-3. Crie um arquivo chamado `.env`, com a seguinte variável: 
-```
+### 3. Configure as variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto com a seguinte variável:
+```env
 export GOOGLE_APPLICATION_CREDENTIALS=</path/service/account.json>
 ```
 
-3. Rode o docker-compose
+> Substitua `</path/service/account.json>` pelo caminho real da sua service account do GCP.
 
+### 4. Suba os containers com Docker Compose
 ```bash
 docker compose up -d --build
 ```
 
-4. Após todos os container estiverem ativos, acesse `http://127.0.0.1:4200/dashboard` para acessar a UI do Prefect e também acesse o `http://localhost:8000/` para rodar o FAST API.
+### 5. Acesse as interfaces
 
-5. Acesse a aba `Blocks` na UI do Prefect e adicione o nome do seu bucket no GCP em `cgu-bucket` e o local que se encontra a sua service-account em `cgu-service-account`.
+Após todos os containers estarem ativos, acesse:
 
-   5.1. Caso queira criar um novo bucket, aconselho que utilize o Terraform no arquivo `terraform/main.tf` e altere o nome do bucket dentro do blocks.
+- **Prefect UI** → [http://127.0.0.1:4200/dashboard](http://127.0.0.1:4200/dashboard)
+- **FastAPI** → [http://localhost:8000/](http://localhost:8000/)
+
+### 6. Configure os Blocks no Prefect
+
+Na UI do Prefect, acesse a aba **Blocks** e configure:
+
+- `cgu-bucket` → nome do seu bucket no GCP
+- `cgu-service-account` → caminho da sua service account
+
+> **💡 Dica:** Caso queira criar um novo bucket, utilize o Terraform disponível em `terraform/main.tf` e atualize o nome do bucket dentro dos blocks após a criação.
 ---
 
 ## Fluxo dos Dados
 
-O Prefect executa a pipeline TODOS os dias às 19:00hrs de Brasília. O Flow se chama `CGU Data Pipeline` e está configurado no arquivo `src.pipelines.flows.py` que posteriormente é feito o deploy pelo arquivo `deploy.py` que se chama `deploy-cgu`.
+## Orquestração
 
-A pipeline possui algumas tasks que fazem todo o fluxo rodar. No arquivo chamado `src.pipelines.tasks`, eu criei três grandes tasks: 
+O **Prefect** executa a pipeline diariamente às **19:00 (horário de Brasília)**.
 
-1. check_for_updates: Basicamente, essa task construi a URL, a partir de uma verificação na data máxima da camada bronze, adicionando 4 meses, pois os dados são disponibilizados dentro desse período. e verifica se ela retorna um `200` . Se retornar 200, verificamos a requisição foi bem sucedida e podemos baixar os dados. É basicamente uma task de verificação e download, se ela retornar False, a pipeline é encerrada e só roda no outro dia. Visando resolver o problema do desafio, uma lógica foi criada para impossibilitar o carregamento de dados duplicados no banco. 
+- **Flow:** `CGU Data Pipeline`  
+- **Definição:** `src.pipelines.flows.py`  
+- **Deploy:** `deploy.py`  
+- **Nome do deployment:** `deploy-cgu`  
 
-3. ingest_and_partition: Essa task faz todo o processo de ingestão, após algumas validações. Algumas tabelas como `201901`, tinha um grande problema que não vinha com as colunas, dessa forma, precisei validar e se não tivesse, cria-la. Posteriormente, salvo os arquivos em .parquet particionados com os seus anos e meses de carga. `terceirizados_201901`, `terceirizados_201902`
+> [!NOTE]  
+> Se for a primeira execução do projeto, recomenda-se fortemente rodar a pipeline com o parâmetro `load_to_data=True`.  
+>  
+> Nesse modo, o bucket será populado com todos os dados históricos disponíveis, executando integralmente o processo de ingestão, validação e particionamento.
 
-No arquivo chamado `src.utils.setup`, criei os arquivos que podem ser replicados.
-1. upload_files_in_directory: Sobe os arquivos de um diretório local para uma folder no GCS.
-2. Executa um dbt run em cada camada de dados específica (bronze, silver e gold) e também fazer o testes na camada Silver.
+---
 
-Por fim, a camada gold expõe os dados via API REST com FastAPI e retornar dados com paginação com o seguinte código: `http://localhost:8000/terceirizados/pages/{page}` e um where na base com o id do terceirizado `http://localhost:8000/terceirizados/{id}`
+## Estrutura das Tasks (`src.pipelines.tasks`)
+
+A pipeline é composta por tasks responsáveis por controlar disponibilidade, ingestão e consistência dos dados.
+
+### 1. `check_for_updates`
+
+Responsável por:
+
+- Consultar a **data máxima** disponível na camada Bronze.
+- Adicionar **4 meses** à data encontrada (janela em que os dados costumam ser publicados).
+- Construir dinamicamente a URL de verificação.
+- Validar se a requisição HTTP retorna **status 200**.
+
+**Comportamento:**
+
+- Se retornar `200`, os dados são considerados disponíveis e o download é iniciado.
+- Caso contrário, a execução é encerrada de forma controlada e o flow será reexecutado no próximo agendamento.
+
+Foi implementada ainda uma lógica para impedir carga duplicada no banco, garantindo **idempotência** no processo.
+
+---
+
+### 2. `ingest_and_partition`
+
+Responsável pela ingestão e padronização dos dados.
+
+Principais etapas:
+
+- Validação estrutural dos arquivos.
+- Correção de inconsistências históricas (exemplo: `201901`, que não continha cabeçalho de colunas).
+- Garantia de padronização do schema antes da persistência.
+
+Após validação, os dados são salvos em formato **`.parquet`**, particionados por ano e mês:
+
+```
+terceirizados_201901
+terceirizados_201902
+```
+
+Essa estratégia melhora organização, rastreabilidade e performance de leitura.
+
+---
+
+## Utilitários (`src.utils.setup`)
+
+### 1. `upload_files_in_directory`
+
+Realiza o upload de todos os arquivos de um diretório local para uma pasta específica no **GCS**.
+
+### 2. Execução do dbt
+
+Executa:
+
+- `dbt run` para as camadas:
+  - Bronze
+  - Silver
+  - Gold
+- `dbt test` na camada Silver
+
+A camada **Silver** utiliza materialização **incremental com chave técnica**, evitando reprocessamento completo e garantindo eficiência.
+
+---
+
+> [!NOTE]  
+> Caso deseje executar a pipeline para anos anteriores, consulte a documentação da função `check_for_update_and_download`.  
+>  
+> Não há previsão oficial de atualização retroativa na fonte. Portanto:
+>  
+> - A camada **Silver** não será reprocessada integralmente (modelo incremental).  
+> - A camada **Gold**, derivada da Silver, também não sofrerá alterações.  
+>  
+> Execuções retroativas possuem finalidade demonstrativa, evidenciando a consistência e reprodutibilidade da arquitetura.
+
+---
+
+## Exposição da Camada Gold via API
+
+A camada **Gold** é exposta por meio de uma API REST construída com **FastAPI**.
+
+### Endpoints disponíveis
+
+**Paginação:**
+```bash
+http://localhost:8000/terceirizados/pages/{page}
+```
+
+
+**Consulta por ID:**
+```
+http://localhost:8000/terceirizados/{id}
+```
+
+A API implementa paginação e filtros diretamente na base, garantindo eficiência no consumo dos dados.
 
 Percebe-se na imagem abaixo que o fluxo de Dados rodou perfeitamente no Prefect 3.
 ![alt text](images/image.png)

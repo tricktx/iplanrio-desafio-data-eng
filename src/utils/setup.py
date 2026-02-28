@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import google.auth
 import google.auth.transport.requests
 from google.oauth2 import service_account
+import requests
 
 def get_gcs_token():
     """
@@ -29,8 +30,10 @@ def get_gcs_token():
         "service-account.json",
         scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
-    auth_req = google.auth.transport.requests.Request()
-
+    
+    session = requests.Session()
+    auth_req = google.auth.transport.requests.Request(session=session)
+    
     creds.refresh(auth_req)
     
     return creds.token

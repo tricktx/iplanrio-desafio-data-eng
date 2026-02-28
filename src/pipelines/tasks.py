@@ -49,12 +49,11 @@ def check_for_update_and_download(format: List[str], date : str) -> bool:
     Raises:
         Logs a message if a URL is found and the pipeline is starting.
     """
-    date_max_date = max_date_duckdb(file_parquet = "gs://br-cgu-terceirizados/terceirizados/*.parquet")
-    
-    build_filename = build_filenames(yyyymm = date_max_date)
     
     for formato in format:
         if date is None:
+            date_max_date = max_date_duckdb(file_parquet = "gs://br-cgu-terceirizados/terceirizados/*.parquet")
+            build_filename = build_filenames(yyyymm = date_max_date)
             for build in build_filename:
                 filename = f'{build}{formato}'
                 url = f'{constants.URL}{filename}'
