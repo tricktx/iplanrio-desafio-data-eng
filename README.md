@@ -33,6 +33,8 @@ br-cgu-terceirizados/
     └── terceirizados-gold.duckdb
 ```
 
+Caso queiram conferir, segue o link para o storage público: https://storage.cloud.google.com/br-cgu-terceirizados
+
 
 ## Arquiteutra do Projeto
 
