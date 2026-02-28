@@ -38,9 +38,48 @@ br-cgu-terceirizados/
 
 ![Texto Alternativo](images/arquitetura.png)
 
+## Tabela de arquitetura
+
+| name                          | type    | description                                                                 | temporal_coverage     | measurement_unit | has_sensitive_data | original_name              |
+|--------------------------------|---------|-----------------------------------------------------------------------------|-----------------------|------------------|-------------------|----------------------------|
+| id                             | string  | Identificador do registro do terceirizado nesta base de dados             | 2019-1(4)2025-12      |                  | no                | id_terc                    |
+| sigla_orgao_superior           | string  | Sigla do órgão superior da unidade gestora do terceirizado                | 2019-1(4)2025-12      |                  | no                | sg_orgao_sup_tabela_ug     |
+| id_unidade_gestora             | string  | Código da unidade gestora (SIAFI) do terceirizado                         | 2019-1(4)2025-12      |                  | no                | cd_ug_gestora              |
+| nome_unidade_gestora           | string  | Nome da unidade gestora do terceirizado                                    | 2019-1(4)2025-12      |                  | no                | nm_ug_tabela_ug            |
+| sigla_unidade_gestora          | string  | Sigla da unidade gestora do terceirizado                                   | 2019-1(4)2025-12      |                  | no                | sg_ug_gestora              |
+| id_contrato                    | string  | Número do contrato com a empresa terceirizada                              | 2019-1(4)2025-12      |                  | no                | nr_contrato                |
+| cnpj_empresa                   | string  | CNPJ da empresa terceirizada                                                | 2019-1(4)2025-12      |                  | yes               | nr_cnpj                    |
+| razao_social                   | string  | Razão social da empresa terceirizada                                        | 2019-1(4)2025-12      |                  | yes               | nm_razao_social            |
+| cpf                            | string  | CPF do terceirizado                                                         | 2019-1(4)2025-12      |                  | yes               | nr_cpf                     |
+| nome                           | string  | Nome completo do terceirizado                                               | 2019-1(4)2025-12      |                  | yes               | nm_terceirizado            |
+| id_categoria_profissional      | string  | Código CBO e descrição da categoria profissional                           | 2019-1(4)2025-12      |                  | no                | nm_categoria_profissional  |
+| escolaridade                   | string  | Nível de escolaridade exigido pela ocupação                                 | 2019-1(4)2025-12      |                  | no                | nm_escolaridade            |
+| jornada                        | int64   | Quantidade de horas semanais de trabalho                                    | 2019-1(4)2025-12      | hour             | no                | nr_jornada                 |
+| descricao_unidade_prestacao    | string  | Descrição da unidade onde o terceirizado trabalha                          | 2019-1(4)2025-12      |                  | no                | nm_unidade_prestacao       |
+| salario                        | float64 | Valor mensal do salário do terceirizado                                     | 2019-1(4)2025-12      | brl              | no                | vl_mensal_salario          |
+| custo                          | float64 | Custo total mensal do terceirizado                                          | 2019-1(4)2025-12      | brl              | no                | vl_mensal_custo            |
+| mes                            | int64   | Mês da carga de dados                                                        | 2019-1(4)2025-12      | month            | no                | Num_Mes_Carga              |
+| ano                            | int64   | Ano da carga dos dados                                                       | 2019-1(4)2025-12      | year             | no                | Ano_Carga                  |
+| sigla_orgao                    | string  | Sigla do órgão onde o terceirizado trabalha                                 | 2019-1(4)2025-12      |                  | no                | sg_orgao                   |
+| nome_orgao                     | string  | Nome do órgão onde o terceirizado trabalha                                  | 2019-1(4)2025-12      |                  | no                | nm_orgao                   |
+| id_siafi                       | string  | Código SIAFI do órgão onde o terceirizado trabalha                          | 2019-1(4)2025-12      |                  | no                | cd_orgao_siafi             |
+| id_siape                       | string  | Código SIAPE do órgão onde o terceirizado trabalha                          | 2019-1(4)2025-12      |                  | no                | cd_orgao_siape             |
+| (deletado)                     | —       | Coluna removida do modelo                                                    | —                     | —                | —                 | Mes_Carga                  |
+
+## Requisitos de Ambiente
+
+| Ferramenta   | Versão Testada |
+|-------------|----------------|
+| Python      | 3.10.12       |
+| Terraform   | v1.13.5         |
+| Prefect     | 3.4.25        |
+| dbt-duckdb    | 1.9.6         |
+| Docker      | 29.0.2        |
+| Docker Compose | v2.40.3      |
+| fastapi | 0.129.0     |
+
 ## Configurando o projeto
 
-## Configurando o Projeto
 
 ### 1. Clone o repositório
 ```bash
@@ -77,8 +116,8 @@ Após todos os containers estarem ativos, acesse:
 
 Na UI do Prefect, acesse a aba **Blocks** e configure:
 
-- `cgu-bucket` → nome do seu bucket no GCP
-- `cgu-service-account` → caminho da sua service account
+- `cgu-bucket` → nome do seu bucket no GCP → Aconselhamos a criar um bucket chamado: `br-cgu-terceirizados`
+- `cgu-service-account` → caminho da sua service account a sua chave completa do JSON → `service-account.json`
 
 > **💡 Dica:** Caso queira criar um novo bucket, utilize o Terraform disponível em `terraform/main.tf` e atualize o nome do bucket dentro dos blocks após a criação.
 ---

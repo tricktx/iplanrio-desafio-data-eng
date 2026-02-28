@@ -49,48 +49,45 @@ def check_for_update_and_download(format: List[str], date : str) -> bool:
     Raises:
         Logs a message if a URL is found and the pipeline is starting.
     """
-    
+
+    if date is None:
+        build_filename = build_filenames(yyyymm=max_date_duckdb(file_parquet="gs://br-cgu-terceirizados/terceirizados/*.parquet"))
+    else:
+        build_filename = [date]
+
     for formato in format:
-        if date is None:
-            date_max_date = max_date_duckdb(file_parquet = "gs://br-cgu-terceirizados/terceirizados/*.parquet")
-            build_filename = build_filenames(yyyymm = date_max_date)
-            for build in build_filename:
-                filename = f'{build}{formato}'
-                url = f'{constants.URL}{filename}'
-                log(f'Checking for update at {url}...')
-            
-        elif date is not None:
-            filename = f'{date}{formato}'
+        for build in build_filename:
+            filename = f'{build}{formato}'
             url = f'{constants.URL}{filename}'
             log(f'Checking for update at {url}...')
 
-        try:
-            r = requests.get(
-                url,
-                cookies=constants.COOKIES,
-                headers=constants.HEADERS,
-                timeout=10
-            )
+            try:
+                r = requests.get(
+                    url,
+                    cookies=constants.COOKIES,
+                    headers=constants.HEADERS,
+                    timeout=10
+                )
+                if r.status_code == 200:
+                    log(f'Arquivo encontrado: {url}')
+                    log('Iniciando pipeline...')
+                    os.makedirs('input', exist_ok=True)
+                    log(f'Baixando em input/{build}{formato}...')
+                    with open(f'input/{build}{formato}', 'wb') as f:
+                        f.write(r.content)
+                    return True
 
-            if r.status_code == 200:
-                log(f'Arquivo encontrado: {url}')
-                log(f'URL  exists: {url}!!! Starting pipeline...')
-                os.makedirs('input', exist_ok=True)
-                log(f'downloading in input/{date}{formato}...')
-                with open(f'input/{date}{formato}', 'wb') as f:
-                    f.write(r.content)
-                return True
+                elif r.status_code == 404: 
+                    log(f'Não encontrado (404): {url}')
+                    continue
 
-            elif r.status_code == 404:
-                log(f'Não encontrado (404): {url}')
-                continue
+                else:
+                    log(f'Status inesperado {r.status_code}: {url}')
+                    continue
 
-            else:
-                log(f'Status inesperado {r.status_code}: {url}')
-
-        except requests.exceptions.RequestException as e:
-            log(f"Erro de conexão em {url}: {e}")
-            return False
+            except requests.exceptions.RequestException as e:
+                log(f"Erro de conexão em {url}: {e}")
+                return False
 
 @task
 def ingest_and_partition(input : str, output : str) -> None:

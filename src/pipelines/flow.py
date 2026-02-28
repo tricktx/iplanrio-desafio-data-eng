@@ -63,6 +63,6 @@ def flow_cgu(
 
 if __name__ == "__main__":
     flow_cgu(
-        load_to_data=True,
+        load_to_data=False,
         date=None
     )
